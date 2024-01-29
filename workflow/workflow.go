@@ -26,6 +26,7 @@ type Releaser struct {
 	branch      string
 	client      *github.Client
 	gitDir      string
+	dryRun      bool
 }
 
 type Options struct {
@@ -34,6 +35,7 @@ type Options struct {
 	Branch      string
 	AccessToken string
 	GitDir      string
+	DryRun      bool
 }
 
 func New(_ context.Context, opts Options) *Releaser {
@@ -43,6 +45,7 @@ func New(_ context.Context, opts Options) *Releaser {
 		branch: opts.Branch,
 		client: newClient(opts.AccessToken),
 		gitDir: opts.GitDir,
+		dryRun: opts.DryRun,
 	}
 }
 
@@ -221,7 +224,12 @@ func (r Releaser) updateChangeLog(ctx context.Context, version version.Version, 
 		return err
 	}
 
-	b.GitAdd("ChangeLog", buf.Bytes())
+	if r.dryRun {
+		log.Println("File ChangeLog:")
+		log.Println(changes.FileFormat())
+		return nil
+	}
 
+	b.GitAdd("ChangeLog", buf.Bytes())
 	return b.GitCommit(ctx, fmt.Sprintf("Update ChangeLog for version %s.", version))
 }

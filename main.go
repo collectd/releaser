@@ -24,6 +24,7 @@ func main() {
 		Branch:      "collectd-6.0",
 		AccessToken: os.Getenv(tokenEnv),
 		GitDir:      "/home/octo/collectd/.git",
+		DryRun:      true,
 	}
 
 	if opts.AccessToken == "" {
