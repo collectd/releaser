@@ -86,6 +86,10 @@ func (r Releaser) Run(ctx context.Context) error {
 		return err
 	}
 
+	if err := r.createGitHubRelease(ctx, nextVersion, changeLog); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -232,4 +236,28 @@ func (r Releaser) updateChangeLog(ctx context.Context, version version.Version, 
 
 	b.GitAdd("ChangeLog", buf.Bytes())
 	return b.GitCommit(ctx, fmt.Sprintf("Update ChangeLog for version %s.", version))
+}
+
+func (r Releaser) createGitHubRelease(ctx context.Context, version version.Version, changes changelog.Data) error {
+	rel := &github.RepositoryRelease{
+		TagName:         github.String(version.Tag()),
+		TargetCommitish: github.String(r.branch),
+		Name:            github.String(version.String()),
+		Body:            github.String(changes.Markdown()),
+		Prerelease:      github.Bool(true),
+	}
+
+	if r.dryRun {
+		log.Println("GitHub Release:")
+		log.Printf("%v\n", rel)
+		return nil
+	}
+
+	rel, _, err := r.client.Repositories.CreateRelease(ctx, r.owner, r.repo, rel)
+	if err != nil {
+		return fmt.Errorf("Repositories.CreateRelease(%q, %q, %q): %w", r.owner, r.repo, version, err)
+	}
+
+	log.Printf("Successfully created release: %s", rel.GetHTMLURL())
+	return nil
 }
