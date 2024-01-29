@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"os"
 
@@ -13,9 +14,14 @@ const (
 	repo  = "collectd"
 )
 
+var (
+	dryRun = flag.Bool("dryrun", true, "controls whether changes are made upstream")
+)
+
 const tokenEnv = "GITHUB_TOKEN"
 
 func main() {
+	flag.Parse()
 	ctx := context.Background()
 
 	opts := workflow.Options{
@@ -24,7 +30,7 @@ func main() {
 		Branch:      "collectd-6.0",
 		AccessToken: os.Getenv(tokenEnv),
 		GitDir:      "/home/octo/collectd/.git",
-		DryRun:      true,
+		DryRun:      *dryRun,
 	}
 
 	if opts.AccessToken == "" {
