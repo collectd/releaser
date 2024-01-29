@@ -51,6 +51,10 @@ func (cl Data) Swap(i, j int) {
 }
 
 func (cl Data) String() string {
+	return cl.Markdown()
+}
+
+func (cl Data) Markdown() string {
 	var b strings.Builder
 	for _, e := range cl.entries {
 		fmt.Fprintln(&b, "*  ", e)
