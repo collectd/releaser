@@ -56,7 +56,7 @@ func (r Releaser) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Previous release was %v at %v", prevRelease.GetName(), prevRelease.GetTagName())
+	log.Printf("Previous release was %q at tag %q", prevRelease.GetName(), prevRelease.GetTagName())
 
 	prs, err := r.pullRequestsSince(ctx, prevRelease)
 	if err != nil {
@@ -99,6 +99,13 @@ func (r Releaser) pullRequestsSince(ctx context.Context, prevRelease *github.Rep
 		return nil, err
 	}
 
+	if len(ids) == 0 {
+		log.Println("No new pull requests found.")
+		return nil, nil
+	}
+
+	log.Printf("Found %d pull request(s):\n", len(ids))
+
 	var ret []*github.PullRequest
 	for _, id := range ids {
 		pr, _, err := r.client.PullRequests.Get(ctx, r.owner, r.repo, id)
@@ -106,6 +113,7 @@ func (r Releaser) pullRequestsSince(ctx context.Context, prevRelease *github.Rep
 			return nil, fmt.Errorf("PullRequests.Get(%q, %q, %d): %w", r.owner, r.repo, id, err)
 		}
 		ret = append(ret, pr)
+		log.Printf("* #%d %q\n", pr.GetNumber(), pr.GetTitle())
 	}
 
 	return ret, nil
@@ -147,7 +155,6 @@ func (r Releaser) prIDsSince(ctx context.Context, ref string) ([]int, error) {
 		if err != nil || n <= 0 {
 			continue
 		}
-		log.Printf("DEBUG: Found PR %d", n)
 		ret = append(ret, n)
 	}
 
@@ -169,12 +176,11 @@ func (r Releaser) lastRelease(ctx context.Context) (*github.RepositoryRelease, e
 	for {
 		releases, resp, err := r.client.Repositories.ListReleases(ctx, r.owner, r.repo, &opt)
 		if err != nil {
-			return nil, fmt.Errorf("Repositories.ListReleases%q, %q): %w", r.owner, r.repo, err)
+			return nil, fmt.Errorf("Repositories.ListReleases(%q, %q): %w", r.owner, r.repo, err)
 		}
 
 		for _, r := range releases {
 			if !strings.HasPrefix(r.GetName(), "6") || r.GetDraft() {
-				log.Printf("lastRelease: ignoring release %q", r.GetName())
 				continue
 			}
 
@@ -209,9 +215,7 @@ func newClient(accessToken string) *github.Client {
 }
 
 func (r Releaser) updateChangeLog(ctx context.Context, version version.Version, changes changelog.Data) error {
-	// FIXME
-	// b, err := r.GitCheckout(ctx, r.branch)
-	b, err := r.GitCheckout(ctx, "releaser-test")
+	b, err := r.GitCheckout(ctx, r.branch)
 	if err != nil {
 		return err
 	}
